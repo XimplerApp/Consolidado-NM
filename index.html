@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Consolidación de Resultados - Reto Nómina Muerta</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { color: #222; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; }
+    select { width: 100%; }
+    .auto { font-weight: bold; color: #003366; }
+  </style>
+</head>
+<body>
+<h2>Consolidación de Resultados - Reto Nómina Muerta</h2>
+<p>Llena esta tabla digital con los resultados individuales del checklist y autodiagnósticos A y B. Los niveles de riesgo se calculan automáticamente.</p>
+<table>
+<thead>
+<tr>
+<th>Nombre</th>
+<th>Área/Equipo</th>
+<th>Rol</th>
+<th>Puntaje Checklist</th>
+<th>Nivel de Riesgo (Checklist)</th>
+<th>Puntaje A</th>
+<th>Nivel de Riesgo (A)</th>
+<th>Puntaje B</th>
+<th>Nivel de Riesgo (B)</th>
+<th>Focos de Intervención Propuestos</th>
+<th>% de Nómina Muerta</th>
+<th>$ Nómina Mensual</th><th>Nómina Muerta en $</th></tr>
+</thead>
+<tbody id="tableBody">
+</tbody>
+</table>
+<button onclick="addRow()" style="margin-top: 15px; padding: 8px 16px; font-size: 1em;">+ Agregar otra persona</button>
+<button onclick="calculateAverages()" style="margin-top: 10px; padding: 8px 16px; font-size: 1em;">Calcular Promedios del Equipo</button>
+<script>
+    function updateRisk(input) {
+      const row = input.parentElement.parentElement;
+      const checklist = parseFloat(row.cells[3].querySelector('input').value);
+      const a = parseFloat(row.cells[5].querySelector('input').value);
+      const b = parseFloat(row.cells[7].querySelector('input').value);
+
+      row.cells[4].textContent = riskLevelChecklist(checklist);
+      row.cells[6].textContent = riskLevelAB(a);
+      row.cells[8].textContent = riskLevelAB(b);
+    }
+
+    function riskLevelChecklist(score) {
+      if (isNaN(score)) return "";
+      if (score <= 3) return "Bajo";
+      if (score <= 6) return "Moderado";
+      if (score <= 10) return "Alto";
+      return "Crítico";
+    }
+
+    function riskLevelAB(score) {
+      if (isNaN(score)) return "";
+      if (score <= 20) return "Excelente";
+      if (score <= 30) return "Bueno";
+      if (score <= 40) return "Moderado";
+      if (score <= 50) return "Crítico";
+      return "Muy Alto";
+    }
+
+    function togglePopup(button) {
+      const popup = button.nextElementSibling;
+      const visible = popup.style.display === 'block';
+      document.querySelectorAll('.popup').forEach(p => p.style.display = 'none');
+      popup.style.display = visible ? 'none' : 'block';
+    }
+
+    function updateRoleBehavior(select) {
+      const row = select.closest('tr');
+      const isLider = select.value === 'Líder';
+      const inputA = row.cells[5].querySelector('input');
+      const inputB = row.cells[7].querySelector('input');
+      inputA.disabled = !isLider;
+      inputB.disabled = isLider;
+    }
+
+    
+function addRow() {
+  const tbody = document.getElementById('tableBody');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input type="text"></td>
+    <td><input type="text"></td>
+    <td>
+      <select onchange="updateRoleBehavior(this)">
+        <option value="Líder">Líder</option>
+        <option value="Colaborador">Colaborador</option>
+      </select>
+    </td>
+    <td><input type="number" min="0" max="27" oninput="updateRisk(this)"></td>
+    <td class="auto"></td>
+    <td><input type="number" min="15" max="60" oninput="updateRisk(this)"></td>
+    <td class="auto"></td>
+    <td><input type="number" min="15" max="60" oninput="updateRisk(this)"></td>
+    <td class="auto"></td>
+    <td>
+      <button type="button" onclick="togglePopup(this)">Seleccionar focos</button>
+      <div class="popup" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; padding:10px; box-shadow: 0 0 5px rgba(0,0,0,0.2); z-index:100;">
+        <label><input type="checkbox"> Flujo operativo ineficiente</label><br>
+        <label><input type="checkbox"> Comunicación dispersa</label><br>
+        <label><input type="checkbox"> Supervisión débil</label><br>
+        <label><input type="checkbox"> Desalineación estratégica</label><br>
+        <label><input type="checkbox"> Desgaste cognitivo</label><br>
+        <button type="button" onclick="this.parentElement.style.display='none'">Cerrar</button>
+      </div>
+    </td>
+    <td><input type="number" min="0" max="100" step="1" placeholder="%" oninput="calculateNominaMuerta(this)"></td>
+    <td><input type="number" min="0" step="0.01" placeholder="$" oninput="calculateNominaMuerta(this)"></td>
+    <td class="auto"></td>
+  `;
+  tbody.appendChild(row);
+  const select = row.cells[2].querySelector('select');
+  updateRoleBehavior(select);
+}
+
+
+function calculateNominaMuerta(input) {
+  const row = input.closest('tr');
+  const porcentaje = parseFloat(row.cells[10].querySelector('input')?.value);
+  const mensual = parseFloat(row.cells[11].querySelector('input')?.value);
+  if (!isNaN(porcentaje) && !isNaN(mensual)) {
+    const resultado = (porcentaje / 100) * mensual;
+    row.cells[12].textContent = `$${resultado.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  } else {
+    row.cells[12].textContent = '';
+  }
+}
+
+
+
+function calculateAverages() {
+  const tbody = document.getElementById("tableBody");
+  const existingSummary = document.getElementById("summaryRow");
+  if (existingSummary) tbody.removeChild(existingSummary);
+
+  let rows = Array.from(tbody.querySelectorAll("tr"));
+  let totalChecklist = 0, countChecklist = 0;
+  let totalA = 0, countA = 0;
+  let totalB = 0, countB = 0;
+  let totalPct = 0, countPct = 0;
+  let totalNomina = 0, countNomina = 0;
+  let totalNM = 0, countNM = 0;
+
+  rows.forEach(row => {
+    if (row.id === "summaryRow") return;
+    const checklist = parseFloat(row.cells[3].querySelector('input')?.value);
+    if (!isNaN(checklist)) { totalChecklist += checklist; countChecklist++; }
+
+    const a = row.cells[5].querySelector('input');
+    if (!a.disabled && !isNaN(parseFloat(a.value))) { totalA += parseFloat(a.value); countA++; }
+
+    const b = row.cells[7].querySelector('input');
+    if (!b.disabled && !isNaN(parseFloat(b.value))) { totalB += parseFloat(b.value); countB++; }
+
+    const pct = parseFloat(row.cells[10].querySelector('input')?.value);
+    const mensual = parseFloat(row.cells[11].querySelector('input')?.value);
+    const nm_val = parseFloat(row.cells[12].textContent.replace(/[^0-9.]/g, ''));
+    if (!isNaN(pct)) { totalPct += pct; countPct++; }
+    if (!isNaN(mensual)) { totalNomina += mensual; countNomina++; }
+    if (!isNaN(nm_val)) { totalNM += nm_val; countNM++; }
+  });
+
+  let avgChecklist = countChecklist ? (totalChecklist / countChecklist).toFixed(1) : '-';
+  let avgA = countA ? (totalA / countA).toFixed(1) : '-';
+  let avgB = countB ? (totalB / countB).toFixed(1) : '-';
+  let avgPct = countPct ? (totalPct / countPct).toFixed(1) + '%' : '-';
+  let avgMensual = countNomina ? `$${(totalNomina / countNomina).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-';
+  let avgNM = countNM ? `$${(totalNM / countNM).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-';
+
+  let summaryRow = document.createElement("tr");
+  summaryRow.id = "summaryRow";
+  summaryRow.innerHTML = `
+    <td colspan="3" style="font-weight:bold; background:#eee;">Promedio del Equipo</td>
+    <td style="font-weight:bold; background:#eee;">${avgChecklist}</td>
+    <td></td>
+    <td style="font-weight:bold; background:#eee;">${avgA}</td>
+    <td></td>
+    <td style="font-weight:bold; background:#eee;">${avgB}</td>
+    <td></td>
+    <td></td>
+    <td style="font-weight:bold; background:#eee;">${avgPct}</td>
+    <td style="font-weight:bold; background:#eee;">${avgMensual}</td>
+    <td style="font-weight:bold; background:#eee;">${avgNM}</td>`;
+  tbody.appendChild(summaryRow);
+}
+
+
+window.onload = () => { addRow(); };</script>
+</body>
+</html>
